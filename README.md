@@ -40,11 +40,24 @@ Before you begin, ensure you have the following installed:
 ```bash
 python sender.py
 ```
+
+If you need a specific camera device, set `CAMERA_ID` before starting the sender:
+
+```bash
+CAMERA_ID=0 python sender.py
+```
+
 ### Start `receiver.py` on Local Machine:
 
 ```bash
 python receiver.py
 ```
+
+## Troubleshooting
+
+- If `sender.py` reports `Unable to open camera index ... Available video devices: none`, the Linux environment does not currently expose a webcam as `/dev/video*`.
+- In WSL2, this usually means the camera is only visible to Windows, not to the Linux guest. In that case, run the sender on native Windows/Linux with direct camera access, or attach a USB camera device into WSL before retrying.
+- If a camera is available, verify the device list with `ls -l /dev/video*` and then set the correct `CAMERA_ID`.
 ## Contributing
 Contributions are welcome! Please open an issue or submit a pull request for any improvements or additions.
 

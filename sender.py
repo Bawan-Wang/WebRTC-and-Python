@@ -1,5 +1,7 @@
 import asyncio
+import glob
 import cv2
+import os
 from aiortc import RTCPeerConnection, RTCSessionDescription, VideoStreamTrack
 from aiortc.contrib.signaling import TcpSocketSignaling
 from av import VideoFrame
@@ -9,7 +11,22 @@ from datetime import datetime
 class CustomVideoStreamTrack(VideoStreamTrack):
     def __init__(self, camera_id):
         super().__init__()
-        self.cap = cv2.VideoCapture(camera_id)
+        backend = cv2.CAP_V4L2 if os.name == "posix" and hasattr(cv2, "CAP_V4L2") else cv2.CAP_ANY
+        self.cap = cv2.VideoCapture(camera_id, backend)
+        if backend == cv2.CAP_V4L2:
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            self.cap.set(cv2.CAP_PROP_FPS, 30)
+        available_devices = sorted(glob.glob("/dev/video*"))
+        if not self.cap.isOpened():
+            devices_text = ", ".join(available_devices) if available_devices else "none"
+            raise RuntimeError(
+                f"Unable to open camera index {camera_id}. "
+                f"Available video devices: {devices_text}. "
+                "If you are running inside WSL or a headless environment, the webcam may not be exposed to Linux. "
+                "Set CAMERA_ID to a valid device index when a camera is available."
+            )
         self.frame_count = 0
 
     async def recv(self):
@@ -69,9 +86,9 @@ async def setup_webrtc_and_run(ip_address, port, camera_id):
         await pc.close()
 
 async def main():
-    ip_address = "192.168.30.40"
+    ip_address = "0.0.0.0"
     port = 9999
-    camera_id = 2  # Change this to the appropriate camera ID
+    camera_id = int(os.getenv("CAMERA_ID", "0"))
     await setup_webrtc_and_run(ip_address, port, camera_id)
 
 if __name__ == "__main__":

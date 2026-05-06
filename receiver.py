@@ -1,6 +1,7 @@
 import asyncio
 import cv2
 import numpy as np
+import os
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from aiortc.contrib.signaling import TcpSocketSignaling
 from av import VideoFrame
@@ -9,6 +10,20 @@ from datetime import datetime, timedelta
 class VideoReceiver:
     def __init__(self):
         self.track = None
+        self.preview_enabled = os.getenv("SHOW_PREVIEW", "1") != "0"
+        os.makedirs("imgs", exist_ok=True)
+
+    def show_frame(self, frame):
+        if not self.preview_enabled:
+            return False
+
+        try:
+            cv2.imshow("Frame", frame)
+            return cv2.waitKey(1) & 0xFF == ord('q')
+        except cv2.error as error:
+            print(f"Preview disabled: {error}")
+            self.preview_enabled = False
+            return False
 
     async def handle_track(self, track):
         print("Inside handle track")
@@ -42,10 +57,8 @@ class VideoReceiver:
 
                 cv2.imwrite(f"imgs/received_frame_{frame_count}.jpg", frame)
                 print(f"Saved frame {frame_count} to file")
-                cv2.imshow("Frame", frame)
-    
-                # Exit on 'q' key press
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+
+                if self.show_frame(frame):
                     break
                 # if frame_count >= 300:
                 #     break
@@ -99,7 +112,9 @@ async def run(pc, signaling):
     print("Closing connection")
 
 async def main():
-    signaling = TcpSocketSignaling("192.168.30.40", 9999)
+    signaling_host = os.getenv("SIGNALING_HOST", "127.0.0.1")
+    signaling_port = int(os.getenv("SIGNALING_PORT", "9999"))
+    signaling = TcpSocketSignaling(signaling_host, signaling_port)
     pc = RTCPeerConnection()
     
     global video_receiver
