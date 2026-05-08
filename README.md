@@ -51,6 +51,45 @@ Notes:
 
 ## Usage
 
+### Start FastAPI Backend for Browser Publisher
+
+The new browser-to-Python flow uses FastAPI as the signaling and receiver backend.
+
+From the repository root, start the backend with:
+
+```bash
+python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Useful backend environment variables:
+
+- `BACKEND_HOST`: backend bind host when launching through `backend.app`. Default: `0.0.0.0`.
+- `BACKEND_PORT`: backend bind port when launching through `backend.app`. Default: `8000`.
+- `BACKEND_RELOAD`: set to `1` to enable reload when launching through `backend.app`.
+- `SAVE_FRAMES`: set to `1` if you want the backend processor to save received frames. Default: `0`.
+- `FRAME_OUTPUT_DIR`: output directory used when `SAVE_FRAMES=1`. Default: `imgs`.
+- `DRAW_TIMESTAMP`: set to `0` to disable drawing timestamps onto received frames.
+
+### Backend Smoke Test
+
+After the backend is running, verify the minimum FastAPI surface from another terminal:
+
+```bash
+python scripts/smoke_test_backend.py
+```
+
+This smoke test checks:
+
+- `GET /health` returns `200`
+- `GET /openapi.json` includes `/health` and `/api/webrtc/offer`
+- `POST /api/webrtc/offer` rejects an invalid payload with `422`
+
+If your backend is not running on `127.0.0.1:8000`, pass a custom base URL:
+
+```bash
+python scripts/smoke_test_backend.py --base-url http://127.0.0.1:9000
+```
+
 ### Start `sender.py` on Remote Server:
 
 ```bash
@@ -118,6 +157,9 @@ SIGNALING_HOST=127.0.0.1 SIGNALING_PORT=9999 SHOW_PREVIEW=0 SAVE_FRAMES=1 FRAME_
 
 ## Troubleshooting
 
+- If `python -m uvicorn backend.app:app ...` fails, make sure you run it from the repository root so Python can import the `backend` package correctly.
+- If the smoke test fails on `/health`, verify that the FastAPI process is still running and listening on the expected host and port.
+- If the smoke test reports missing OpenAPI paths, confirm that you are running the new FastAPI backend instead of the older TCP signaling demo.
 - If `sender.py` reports `Unable to open camera index ... Available video devices: none`, the Linux environment does not currently expose a webcam as `/dev/video*`.
 - In WSL2, this usually means the camera is only visible to Windows, not to the Linux guest. In that case, run the sender on native Windows/Linux with direct camera access, or attach a USB camera device into WSL before retrying.
 - If a camera is available, verify the device list with `ls -l /dev/video*` and then set the correct `CAMERA_ID`.
