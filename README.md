@@ -12,6 +12,10 @@ This repository contains the source code for streaming video frames in real time
 - Python implementation using aiortc and OpenCV
 - Video-file fallback for environments without webcam access
 
+## Additional Documentation
+
+- See `technical_concepts.md` for the WebRTC concepts used in this repository, the offer/answer handshake flow, and where the implementation lives in the code.
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
