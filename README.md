@@ -70,6 +70,38 @@ Useful backend environment variables:
 - `FRAME_OUTPUT_DIR`: output directory used when `SAVE_FRAMES=1`. Default: `imgs`.
 - `DRAW_TIMESTAMP`: set to `0` to disable drawing timestamps onto received frames.
 
+### Start Vue Browser Publisher
+
+The browser publisher lives in `frontend/` and uses Vue 3 + Vite. In development, Vite proxies `/api` requests to the FastAPI backend at `http://127.0.0.1:8000`.
+
+Install frontend dependencies:
+
+```bash
+cd frontend
+npm install
+```
+
+Start the frontend development server:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Then open the URL shown by Vite, usually `http://127.0.0.1:5173`, and use the camera publisher page to:
+
+- request camera permission
+- preview the local video stream
+- create an offer and send it to `POST /api/webrtc/offer`
+- apply the backend answer and start publishing to Python
+
+Build the frontend for production verification:
+
+```bash
+cd frontend
+npm run build
+```
+
 ### Backend Smoke Test
 
 After the backend is running, verify the minimum FastAPI surface from another terminal:
@@ -158,6 +190,9 @@ SIGNALING_HOST=127.0.0.1 SIGNALING_PORT=9999 SHOW_PREVIEW=0 SAVE_FRAMES=1 FRAME_
 ## Troubleshooting
 
 - If `python -m uvicorn backend.app:app ...` fails, make sure you run it from the repository root so Python can import the `backend` package correctly.
+- If `npm run dev` starts but the browser publisher cannot reach `/api/webrtc/offer`, verify that the FastAPI backend is running on `127.0.0.1:8000` or update the proxy target in `frontend/vite.config.js`.
+- If the browser blocks camera access, use `localhost` or a secure origin. `getUserMedia()` is restricted on insecure non-local origins.
+- If the page opens but no local preview appears, confirm that the browser granted camera permission and that another application is not exclusively holding the webcam.
 - If the smoke test fails on `/health`, verify that the FastAPI process is still running and listening on the expected host and port.
 - If the smoke test reports missing OpenAPI paths, confirm that you are running the new FastAPI backend instead of the older TCP signaling demo.
 - If `sender.py` reports `Unable to open camera index ... Available video devices: none`, the Linux environment does not currently expose a webcam as `/dev/video*`.
