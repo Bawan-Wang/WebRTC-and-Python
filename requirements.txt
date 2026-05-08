@@ -1,4 +1,6 @@
 asyncio
 opencv-python-headless
 aiortc
-av 
+av
+fastapi
+uvicorn
