@@ -1,10 +1,7 @@
 import { computed, onBeforeUnmount, ref, shallowRef } from 'vue'
 
 import { createWebRtcAnswer, fetchBackendHealth } from '../api/webrtc'
-
-const defaultRtcConfiguration = {
-  iceServers: [],
-}
+import { createRtcConfiguration } from '../config/runtime'
 
 function createStatusMessage(status, errorMessage) {
   if (status === 'error' && errorMessage) {
@@ -80,7 +77,7 @@ export function useWebRtcPublisher() {
       attachPreviewStream(stream)
 
       status.value = 'creating-offer'
-      const pc = new RTCPeerConnection(defaultRtcConfiguration)
+      const pc = new RTCPeerConnection(createRtcConfiguration())
       peerConnection.value = pc
       connectionState.value = pc.connectionState
 

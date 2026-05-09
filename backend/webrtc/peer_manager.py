@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import uuid
 from contextlib import suppress
 from dataclasses import dataclass, field
 
 from aiortc import RTCPeerConnection, RTCSessionDescription
 
+from backend.settings import BackendSettings, get_backend_settings
 from backend.webrtc.models import WebRTCAnswer, WebRTCOffer
 from backend.webrtc.processor import VideoFrameProcessor
 
@@ -25,9 +25,10 @@ class PeerSession:
 
 
 class PeerManager:
-    def __init__(self) -> None:
+    def __init__(self, *, settings: BackendSettings | None = None) -> None:
+        self._settings = settings or get_backend_settings()
         self._sessions: dict[str, PeerSession] = {}
-        self._ice_gather_timeout = float(os.getenv("ICE_GATHERING_TIMEOUT", "5"))
+        self._ice_gather_timeout = self._settings.ice_gather_timeout
 
     @property
     def active_peer_count(self) -> int:
@@ -35,7 +36,7 @@ class PeerManager:
 
     async def handle_offer(self, offer: WebRTCOffer) -> WebRTCAnswer:
         session_id = uuid.uuid4().hex
-        pc = RTCPeerConnection()
+        pc = RTCPeerConnection(self._settings.build_rtc_configuration())
         processor = VideoFrameProcessor(session_id=session_id)
         session = PeerSession(session_id=session_id, pc=pc, processor=processor)
         self._sessions[session_id] = session

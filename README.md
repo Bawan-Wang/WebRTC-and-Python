@@ -49,6 +49,11 @@ Notes:
     pip install opencv-python
     ```
 
+3. Review the example configuration files before you start:
+
+    - Backend shell environment example: `.env.example`
+    - Frontend Vite environment example: `frontend/.env.example`
+
 ## Usage
 
 ### Start FastAPI Backend for Browser Publisher
@@ -58,7 +63,15 @@ The new browser-to-Python flow uses FastAPI as the signaling and receiver backen
 From the repository root, start the backend with:
 
 ```bash
-python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000 --reload
+python -m backend.app
+```
+
+If you want to override the backend defaults from a local `.env` file, load it before starting the app:
+
+```bash
+cp .env.example .env
+set -a && source .env && set +a
+python -m backend.app
 ```
 
 Useful backend environment variables:
@@ -66,13 +79,16 @@ Useful backend environment variables:
 - `BACKEND_HOST`: backend bind host when launching through `backend.app`. Default: `0.0.0.0`.
 - `BACKEND_PORT`: backend bind port when launching through `backend.app`. Default: `8000`.
 - `BACKEND_RELOAD`: set to `1` to enable reload when launching through `backend.app`.
+- `BACKEND_CORS_ALLOW_ORIGINS`: comma-separated frontend origins allowed to call the backend directly. Default: `http://127.0.0.1:5173,http://localhost:5173`.
+- `BACKEND_ICE_SERVERS`: optional comma-separated list or JSON array of STUN/TURN server definitions used by the Python peer.
+- `ICE_GATHERING_TIMEOUT`: seconds to wait for backend ICE gathering before returning an answer. Default: `5`.
 - `SAVE_FRAMES`: set to `1` if you want the backend processor to save received frames. Default: `0`.
 - `FRAME_OUTPUT_DIR`: output directory used when `SAVE_FRAMES=1`. Default: `imgs`.
 - `DRAW_TIMESTAMP`: set to `0` to disable drawing timestamps onto received frames.
 
 ### Start Vue Browser Publisher
 
-The browser publisher lives in `frontend/` and uses Vue 3 + Vite. In development, Vite proxies `/api` requests to the FastAPI backend at `http://127.0.0.1:8000`.
+The browser publisher lives in `frontend/` and uses Vue 3 + Vite. In development, Vite proxies `/api` requests to the FastAPI backend. The proxy target defaults to `http://127.0.0.1:8000` and can be overridden with `VITE_DEV_PROXY_TARGET`.
 
 Install frontend dependencies:
 
@@ -88,6 +104,13 @@ cd frontend
 npm run dev
 ```
 
+If you want frontend-specific overrides, copy the example file and edit it:
+
+```bash
+cd frontend
+cp .env.example .env.local
+```
+
 Then open the URL shown by Vite, usually `http://127.0.0.1:5173`, and use the camera publisher page to:
 
 - request camera permission
@@ -101,6 +124,33 @@ Build the frontend for production verification:
 cd frontend
 npm run build
 ```
+
+Useful frontend environment variables:
+
+- `VITE_DEV_PROXY_TARGET`: backend origin used by the Vite dev proxy. Default: `http://127.0.0.1:8000`.
+- `VITE_API_BASE_URL`: direct backend origin used by the browser at runtime. Leave empty in local development to use the Vite proxy.
+- `VITE_WEBRTC_ICE_SERVERS`: optional comma-separated list or JSON array of STUN/TURN server definitions used by the browser peer.
+
+### Networking Modes
+
+#### Localhost Development
+
+- Leave `VITE_API_BASE_URL` empty so the browser uses the Vite proxy.
+- Keep `VITE_DEV_PROXY_TARGET=http://127.0.0.1:8000` unless your backend listens somewhere else.
+- The backend default CORS origins already cover `http://127.0.0.1:5173` and `http://localhost:5173` if you later switch to direct API calls.
+
+#### Same-LAN Development
+
+- Start the backend with `BACKEND_HOST=0.0.0.0` so it is reachable from other devices on the network.
+- If frontend and backend run on different machines during development, set `VITE_DEV_PROXY_TARGET=http://<backend-lan-ip>:8000` in `frontend/.env.local`.
+- If the browser should call the backend directly, set `VITE_API_BASE_URL=http://<backend-lan-ip>:8000` and include the frontend origin in `BACKEND_CORS_ALLOW_ORIGINS`.
+- Without STUN/TURN, the supported path is localhost or simple same-LAN testing. More complex NAT or firewall topologies may still fail.
+
+#### STUN / HTTPS Notes
+
+- `getUserMedia()` requires `localhost` or a secure HTTPS origin in browsers.
+- If you move beyond localhost or a flat same-LAN setup, configure both `VITE_WEBRTC_ICE_SERVERS` and `BACKEND_ICE_SERVERS`.
+- STUN may be enough for basic NAT traversal, but production or enterprise networks often still require TURN.
 
 ### Backend Smoke Test
 
@@ -189,12 +239,14 @@ SIGNALING_HOST=127.0.0.1 SIGNALING_PORT=9999 SHOW_PREVIEW=0 SAVE_FRAMES=1 FRAME_
 
 ## Troubleshooting
 
-- If `python -m uvicorn backend.app:app ...` fails, make sure you run it from the repository root so Python can import the `backend` package correctly.
-- If `npm run dev` starts but the browser publisher cannot reach `/api/webrtc/offer`, verify that the FastAPI backend is running on `127.0.0.1:8000` or update the proxy target in `frontend/vite.config.js`.
+- If `python -m backend.app` fails, make sure you run it from the repository root so Python can import the `backend` package correctly.
+- If `npm run dev` starts but the browser publisher cannot reach `/api/webrtc/offer`, verify that the FastAPI backend is running on the origin configured by `VITE_DEV_PROXY_TARGET`, or set `VITE_API_BASE_URL` for direct backend calls.
 - If the browser blocks camera access, use `localhost` or a secure origin. `getUserMedia()` is restricted on insecure non-local origins.
 - If the page opens but no local preview appears, confirm that the browser granted camera permission and that another application is not exclusively holding the webcam.
 - If the smoke test fails on `/health`, verify that the FastAPI process is still running and listening on the expected host and port.
 - If the smoke test reports missing OpenAPI paths, confirm that you are running the new FastAPI backend instead of the older TCP signaling demo.
+- If same-LAN testing works through the Vite proxy but fails when using `VITE_API_BASE_URL`, add the frontend origin to `BACKEND_CORS_ALLOW_ORIGINS`.
+- If same-LAN testing still fails after setting `VITE_WEBRTC_ICE_SERVERS` and `BACKEND_ICE_SERVERS`, check whether NAT, corporate firewalls, or symmetric routing are forcing you to add TURN.
 - If `sender.py` reports `Unable to open camera index ... Available video devices: none`, the Linux environment does not currently expose a webcam as `/dev/video*`.
 - In WSL2, this usually means the camera is only visible to Windows, not to the Linux guest. In that case, run the sender on native Windows/Linux with direct camera access, or attach a USB camera device into WSL before retrying.
 - If a camera is available, verify the device list with `ls -l /dev/video*` and then set the correct `CAMERA_ID`.

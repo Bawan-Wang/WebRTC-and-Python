@@ -1,24 +1,28 @@
 from __future__ import annotations
 
 import logging
-import os
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 
+from backend.settings import get_backend_settings
 from backend.webrtc.models import WebRTCAnswer, WebRTCOffer
 from backend.webrtc.peer_manager import PeerManager
 
 
+settings = get_backend_settings()
+
+
 def configure_logging() -> None:
     logging.basicConfig(
-        level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
+        level=getattr(logging, settings.log_level, logging.INFO),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
 
 
-peer_manager = PeerManager()
+peer_manager = PeerManager(settings=settings)
 
 
 @asynccontextmanager
@@ -35,6 +39,14 @@ app = FastAPI(
     title="WebRTC Python Backend",
     description="FastAPI + aiortc backend that receives browser camera streams.",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=list(settings.cors_allow_origins),
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -66,7 +78,7 @@ async def create_answer(offer: WebRTCOffer, request: Request) -> WebRTCAnswer:
 if __name__ == "__main__":
     uvicorn.run(
         "backend.app:app",
-        host=os.getenv("BACKEND_HOST", "0.0.0.0"),
-        port=int(os.getenv("BACKEND_PORT", "8000")),
-        reload=os.getenv("BACKEND_RELOAD", "0") == "1",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.reload,
     )

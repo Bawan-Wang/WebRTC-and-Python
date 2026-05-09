@@ -1,5 +1,7 @@
+import { runtimeConfig } from '../config/runtime'
+
 export async function createWebRtcAnswer(offer, options = {}) {
-  const baseUrl = options.baseUrl ?? import.meta.env.VITE_API_BASE_URL ?? ''
+  const baseUrl = options.baseUrl ?? runtimeConfig.apiBaseUrl
   const response = await fetch(`${baseUrl}/api/webrtc/offer`, {
     method: 'POST',
     headers: {
@@ -23,7 +25,7 @@ export async function createWebRtcAnswer(offer, options = {}) {
 }
 
 export async function fetchBackendHealth(options = {}) {
-  const baseUrl = options.baseUrl ?? import.meta.env.VITE_API_BASE_URL ?? ''
+  const baseUrl = options.baseUrl ?? runtimeConfig.apiBaseUrl
   const response = await fetch(`${baseUrl}/health`)
   const body = await response.json().catch(() => null)
 
