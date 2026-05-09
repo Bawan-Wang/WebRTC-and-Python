@@ -15,6 +15,7 @@ This repository contains the source code for streaming video frames in real time
 ## Additional Documentation
 
 - See `technical_concepts.md` for the WebRTC concepts used in this repository, the offer/answer handshake flow, and where the implementation lives in the code.
+- See `validation_checklist.md` for the manual validation flow used to verify localhost, cleanup, and failure scenarios.
 
 ## Prerequisites
 
@@ -172,6 +173,16 @@ If your backend is not running on `127.0.0.1:8000`, pass a custom base URL:
 python scripts/smoke_test_backend.py --base-url http://127.0.0.1:9000
 ```
 
+### Manual Validation Checklist
+
+After the smoke test passes, use `validation_checklist.md` to walk through:
+
+- localhost happy path validation
+- stop and reload cleanup validation
+- permission denied validation
+- backend unavailable validation
+- same-LAN and direct-backend validation
+
 ### Start `sender.py` on Remote Server:
 
 ```bash
@@ -241,6 +252,7 @@ SIGNALING_HOST=127.0.0.1 SIGNALING_PORT=9999 SHOW_PREVIEW=0 SAVE_FRAMES=1 FRAME_
 
 - If `python -m backend.app` fails, make sure you run it from the repository root so Python can import the `backend` package correctly.
 - If `npm run dev` starts but the browser publisher cannot reach `/api/webrtc/offer`, verify that the FastAPI backend is running on the origin configured by `VITE_DEV_PROXY_TARGET`, or set `VITE_API_BASE_URL` for direct backend calls.
+- If the UI shows `Backend health check failed ...`, verify that `python -m backend.app` is still running and that the frontend is targeting the correct backend origin.
 - If the browser blocks camera access, use `localhost` or a secure origin. `getUserMedia()` is restricted on insecure non-local origins.
 - If the page opens but no local preview appears, confirm that the browser granted camera permission and that another application is not exclusively holding the webcam.
 - If the smoke test fails on `/health`, verify that the FastAPI process is still running and listening on the expected host and port.

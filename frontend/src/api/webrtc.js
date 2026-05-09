@@ -26,11 +26,20 @@ export async function createWebRtcAnswer(offer, options = {}) {
 
 export async function fetchBackendHealth(options = {}) {
   const baseUrl = options.baseUrl ?? runtimeConfig.apiBaseUrl
-  const response = await fetch(`${baseUrl}/health`)
+  let response
+
+  try {
+    response = await fetch(`${baseUrl}/health`)
+  } catch (error) {
+    throw new Error('Backend health check failed. Verify backend.app is running and reachable.')
+  }
+
   const body = await response.json().catch(() => null)
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch backend health (${response.status})`)
+    throw new Error(
+      `Backend health check failed (${response.status}). Verify backend.app is running and reachable.`,
+    )
   }
 
   return body

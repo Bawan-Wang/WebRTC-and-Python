@@ -180,3 +180,20 @@ backend/
 - 若要跨網段或外網測試，至少需要 STUN；正式環境通常還需要 TURN。
 - 若後端只做即時處理，不建議每幀都輸出圖片到磁碟，容易造成 I/O 瓶頸。
 - 每個連線都要妥善關閉 `RTCPeerConnection` 與相關任務，避免資源洩漏。
+
+## 與執行計畫的對齊
+
+目前主線實作與 exec plan 的關係如下：
+
+- `002-backend-signaling-and-receiver-foundation.md`: 對應 `backend/app.py` 與 `backend/webrtc/` 中的 signaling、peer lifecycle、processor 掛點。
+- `003-vue-camera-publisher-page.md`: 對應 `frontend/src/` 中的 publisher 頁面、local preview、以及 `useWebRtcPublisher`。
+- `004-development-integration-and-networking.md`: 對應 Vite proxy、env 範例、CORS 與 ICE server 設定入口。
+- `005-validation-and-documentation.md`: 對應 `README.md`、`validation_checklist.md`、以及本架構文件中的驗證與限制整理。
+
+005 驗證目前聚焦在以下可重現路徑：
+
+- localhost happy path: 前端建立 offer，後端回 answer，並在 Python 端收到 frame。
+- stop / reload cleanup: 停止送流或重整頁面後，peer session 會在後端被回收。
+- permission denied path: 瀏覽器拒絕攝影機權限時，前端會進入 error state。
+- backend unavailable path: signaling backend 未啟動時，前端會顯示可操作的 backend health error。
+- same-LAN direct-call baseline: browser 可直接呼叫 backend `/health`，更複雜網路拓撲則明確視為 STUN/TURN 的後續範圍。
